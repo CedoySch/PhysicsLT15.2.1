@@ -1,0 +1,36 @@
+name: Build and Package EXE
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3  # Обновлено до v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4  # Обновлено до v4
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install PyQt5
+      run: pip install PyQt5
+
+    - name: Install pyinstaller
+      run: pip install pyinstaller
+
+    - name: Package EXE with PyInstaller
+      run: pyinstaller --onefile --noconsole --name Lecture_Task_15.2.1 main.py
+
+    - name: Upload EXE as artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: exe-package
+        path: dist/Lecture_Task_15.2.1.exe
