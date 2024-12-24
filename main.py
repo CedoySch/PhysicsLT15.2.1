@@ -10,6 +10,11 @@ import numpy as np
 
 
 class AddComponentDialog(QDialog):
+    """
+    Диалоговое окно для добавления компонента (резистор или источник ЭДС).
+    Позволяет выбрать тип компонента, узлы подключения, значение сопротивления или ЭДС.
+    """
+
     def __init__(self, node_count, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Добавление компонента")
@@ -46,6 +51,13 @@ class AddComponentDialog(QDialog):
         self.setLayout(layout)
 
     def get_data(self):
+        """
+        Возвращает:
+          - тип компонента ("resistor" или "source"),
+          - номер первого узла,
+          - номер второго узла,
+          - значение (Float).
+        """
         comp_type = "resistor" if self.component_type.currentText() == "Резистор" else "source"
         node1 = self.node1_spin.value()
         node2 = self.node2_spin.value()
@@ -57,6 +69,11 @@ class AddComponentDialog(QDialog):
 
 
 class MainWindow(QMainWindow):
+    """
+    Основное окно приложения. Содержит поля для количества узлов,
+    кнопку «Добавить компонент», список компонентов и кнопку «Рассчитать».
+    """
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Расчет токов в электрической схеме")
@@ -97,12 +114,19 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
 
     def update_node_count(self):
+        """
+        Обновляет количество узлов и очищает список компонентов,
+        так как при изменении количества узлов конфигурация сбрасывается.
+        """
         self.node_count = self.node_spin.value()
         self.components.clear()
         self.result_label.setText("")
         QMessageBox.information(self, "Успех", f"Установлено {self.node_count} узлов. Список компонентов очищен.")
 
     def add_component(self):
+        """
+        Открывает диалоговое окно для добавления нового компонента.
+        """
         dialog = AddComponentDialog(self.node_count, self)
         if dialog.exec_() == QDialog.Accepted:
             comp_type, n1, n2, value = dialog.get_data()
@@ -111,11 +135,25 @@ class MainWindow(QMainWindow):
                                     f"Добавлен компонент: {comp_type}, узлы ({n1}, {n2}), значение {value}")
 
     def calculate_circuit(self):
+        """
+        Запускает расчёт токов в схеме методом узловых потенциалов.
+        Пояснение (упрощенно):
+          - Составляем систему уравнений, учитывая, что в узловом методе
+            потенциал последнего узла принимаем за 0 (или любой один узел как опорный).
+          - В матрице G храним проводимости (1/R) для резисторов.
+          - Для источников ЭДС (ideal voltage source) нужна дополнительная обработка,
+            однако для простоты оставим как независимые уравнения/ток.
+
+        Для демонстрации предполагается, что схема не содержит особых параллельных
+        ветвей, сложных зависимых источников и т. д. В более сложных случаях
+        потребуются дополнительные проверки и расширение метода.
+        """
         if len(self.components) == 0:
             self.result_label.setText("Нет компонентов для расчёта.")
             return
 
         n = self.node_count
+
         G = np.zeros((n, n), dtype=float)
         I = np.zeros(n, dtype=float)
 
@@ -138,6 +176,7 @@ class MainWindow(QMainWindow):
                 I[node2] -= 1e9 * value
 
         ref_node = n - 1
+
         mask = np.arange(n) != ref_node
         G_reduced = G[mask][:, mask]
         I_reduced = I[mask]
